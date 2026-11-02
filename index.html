@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b0d10">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>محاضرات batman</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0b0d10;--card:#14181d;--line:#242a32;--fg:#f0eee6;--mut:#99a1ad;--pri:#f5c518;--red:#ef4444}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.75 Tajawal,system-ui,sans-serif;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+main{max-width:960px;margin:auto;padding:16px;display:grid;gap:16px}
+header{display:flex;align-items:center;gap:12px}
+header img{width:40px;height:40px}
+h1{font-size:1.5rem;margin:0;font-weight:800;flex:1}
+h2{font-size:1.05rem;margin:0 0 8px;font-weight:700}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}
+.row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+button{font:inherit;cursor:pointer;border:0;border-radius:10px;padding:8px 16px;background:#222831;color:var(--fg)}
+button:disabled{opacity:.45;cursor:default}
+button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--pri);outline-offset:2px}
+.pri{background:var(--pri);color:#0b0d10;font-weight:700}
+.stop{background:var(--red);color:#fff;font-weight:700}
+.ghost{background:none;color:var(--mut)}
+#rec{padding:12px 28px;font-size:1.1rem;border-radius:999px}
+#rec.stop{animation:ring 2s infinite}
+@keyframes ring{0%{box-shadow:0 0 0 0 #ef444477}70%,100%{box-shadow:0 0 0 14px #ef444400}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important}}
+.seg{display:flex;background:#1b2027;border-radius:10px;padding:4px}
+.seg button{background:none;padding:6px 12px;color:var(--mut)}
+.seg button[aria-checked=true]{background:var(--pri);color:#0b0d10;font-weight:700}
+input{font:inherit;width:100%;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+label{display:grid;gap:4px;font-size:.9rem}
+.cols{display:grid;gap:16px}
+@media(min-width:800px){.cols{grid-template-columns:1fr 1fr}.set{grid-template-columns:2fr 1fr 1fr}}
+.set{display:grid;gap:12px;margin-top:12px}
+.list{display:grid;gap:10px;align-content:start}
+.qa{border-inline-start:4px solid var(--pri);border-radius:6px 14px 14px 6px}
+.qa p{margin:6px 0}
+small,.mut{color:var(--mut)}
+.empty{border:1px dashed var(--line);border-radius:14px;padding:14px;color:var(--mut);margin:0}
+ul{margin:0;padding-inline-start:22px;display:grid;gap:6px}
+.pre{white-space:pre-wrap}
+#err{border-color:#ef444488;background:#ef444414;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--red)}
+#tm{font-variant-numeric:tabular-nums}
+summary{cursor:pointer;font-weight:700}
+</style>
+</head>
+<body>
+<main>
+<header>
+  <img src="icon.svg" alt="">
+  <h1>محاضرات batman</h1>
+  <button class="ghost" id="newS">جلسة جديدة</button>
+</header>
+
+<details class="card" id="set">
+  <summary>الإعدادات</summary>
+  <div class="set">
+    <label>مفتاح Gemini API<input id="key" type="password" dir="ltr" placeholder="AIza..." autocomplete="off"></label>
+    <label>النموذج<input id="model" dir="ltr"></label>
+    <label>طول المقطع (ثانية)<input id="seg" type="number" min="10" max="90"></label>
+  </div>
+  <p class="mut" style="margin:10px 0 0;font-size:.85rem">المفتاح من aistudio.google.com/apikey. يُحفظ في متصفحك فقط. المقطع الأقصر يعطي ردوداً أسرع، والأطول ملخصاً أدق.</p>
+</details>
+
+<section class="card row">
+  <div class="seg" id="src" role="radiogroup" aria-label="مصدر الصوت">
+    <button role="radio" data-v="teams">مكالمة Teams</button>
+    <button role="radio" data-v="both">Teams + صوتي</button>
+    <button role="radio" data-v="mic">الميكروفون</button>
+  </div>
+  <div class="row" style="margin-inline-start:auto">
+    <div id="live" class="row" hidden aria-live="polite" style="gap:8px"><span class="dot"></span><span id="tm">00:00</span><span class="mut" id="pend"></span></div>
+    <button id="rec" class="pri">ابدأ التسجيل</button>
+  </div>
+  <p id="hint" class="mut" style="width:100%;margin:0;font-size:.85rem">بعد الضغط اختر تبويب Teams (افتح Teams من المتصفح) وفعّل «مشاركة صوت التبويب». الفيديو لا يُسجَّل ولا يُرسل، الصوت فقط.</p>
+</section>
+
+<p id="err" class="card" role="alert" hidden></p>
+
+<div class="cols">
+  <section><h2>أسئلة المتحدث وأجوبتها</h2><div class="list" id="qa"></div></section>
+  <section><h2>الملخص المباشر</h2><div id="pts"></div></section>
+</div>
+
+<section class="card">
+  <div class="row" style="margin-bottom:10px">
+    <h2 style="margin:0;flex:1">الملخص النهائي</h2>
+    <button id="mk" class="pri">لخّص المكالمة كاملة</button>
+    <button id="cpS" class="ghost">نسخ</button>
+  </div>
+  <div id="sum" class="pre"></div>
+</section>
+
+<details class="card" id="trd">
+  <summary>النص الكامل</summary>
+  <p id="trx" class="pre mut"></p>
+  <div class="row"><button id="cpT" class="ghost">نسخ النص</button><button id="dl" class="ghost">تنزيل كملف</button></div>
+</details>
+</main>
+
+<script>
+const $=s=>document.querySelector(s);
+const el=(t,c,x)=>{const e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e};
+const fmt=s=>String(Math.floor(s/60)).padStart(2,'0')+':'+String(Math.floor(s%60)).padStart(2,'0');
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+
+// ---------- الحالة ----------
+const S={apiKey:'',model:'gemini-2.5-flash',seg:25,src:'teams'};
+try{Object.assign(S,JSON.parse(localStorage.getItem('bt-set')||'{}'))}catch{}
+let D={tr:[],points:[],qas:[],sum:'',fails:[],lastErr:''};
+try{const x=JSON.parse(localStorage.getItem('bt-data')||'null');if(x)D={...D,tr:x.tr||[],points:x.points||[],qas:x.qas||[],sum:x.sum||''}}catch{}
+const saveS=()=>{try{localStorage.setItem('bt-set',JSON.stringify(S))}catch{}};
+const save=()=>{try{localStorage.setItem('bt-data',JSON.stringify({tr:D.tr,points:D.points,qas:D.qas,sum:D.sum}))}catch{}};
+let rec=null,t0=0,idx=0,pend=0,busySum=false,chain=Promise.resolve(),timer=0,wake=null;
+const text=()=>D.tr.filter(Boolean).join('\n');
+
+// ---------- التقاط الصوت ----------
+async function openCapture(src){
+  const streams=[],tracks=[];
+  const stopAll=()=>tracks.forEach(t=>t.stop());
+  try{
+    if(src!=='mic'){
+      if(!navigator.mediaDevices.getDisplayMedia)throw new Error('هذا المتصفح لا يلتقط صوت Teams. افتح التطبيق من Chrome أو Edge على الكمبيوتر، أو اختر الميكروفون.');
+      const scr=await navigator.mediaDevices.getDisplayMedia({video:{width:{ideal:320},height:{ideal:180},frameRate:{ideal:1}},audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
+      tracks.push(...scr.getTracks());
+      if(!scr.getAudioTracks().length)throw new Error('لم تتم مشاركة الصوت. اختر تبويب Teams (أو الشاشة كاملة في ويندوز) وفعّل «مشاركة صوت التبويب».');
+      streams.push(new MediaStream(scr.getAudioTracks()));
+    }
+    if(src!=='teams'){
+      const mic=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}});
+      tracks.push(...mic.getTracks());
+      streams.push(mic);
+    }
+  }catch(e){stopAll();throw e}
+  return{streams,tracks,stop:stopAll};
+}
+
+// يلتقط الصوت الخام ويقطّعه إلى مقاطع WAV مع تداخل ثانيتين كي لا تنقطع الجمل
+const WK="class T extends AudioWorkletProcessor{process(i){const c=i[0][0];if(c)this.port.postMessage(c.slice(0));return true}}registerProcessor('tap',T)";
+async function startPCM(streams,onSeg,sec){
+  const ctx=new AudioContext();await ctx.resume();
+  const u=URL.createObjectURL(new Blob([WK],{type:'text/javascript'}));
+  await ctx.audioWorklet.addModule(u);URL.revokeObjectURL(u);
+  const sr=ctx.sampleRate,node=new AudioWorkletNode(ctx,'tap',{channelCount:1,channelCountMode:'explicit'});
+  const srcs=streams.map(s=>{const m=ctx.createMediaStreamSource(s);m.connect(node);return m});
+  node.connect(ctx.destination);
+  let chunks=[],len=0,tail=new Float32Array(0);
+  const flush=()=>{
+    const all=new Float32Array(tail.length+len);all.set(tail);
+    let o=tail.length;for(const c of chunks){all.set(c,o);o+=c.length}
+    chunks=[];len=0;tail=all.slice(-2*sr);onSeg(all,sr);
+  };
+  node.port.onmessage=e=>{chunks.push(e.data);len+=e.data.length;if(len>=sec*sr)flush()};
+  return{stop(){srcs.forEach(m=>m.disconnect());if(len>sr)flush();node.disconnect();ctx.close()}};
+}
+
+function toWav(f32,sr){
+  const r=sr/16000,n=Math.floor(f32.length/r),pcm=new Int16Array(n);let e=0;
+  for(let i=0;i<n;i++){
+    const a=Math.floor(i*r),b=Math.max(a+1,Math.floor((i+1)*r));let s=0;
+    for(let j=a;j<b;j++)s+=f32[j];
+    const v=Math.max(-1,Math.min(1,s/(b-a)));e+=v*v;pcm[i]=v*32767;
+  }
+  const buf=new ArrayBuffer(44+n*2),d=new DataView(buf);
+  const w=(o,t)=>[...t].forEach((c,i)=>d.setUint8(o+i,c.charCodeAt(0)));
+  w(0,'RIFF');d.setUint32(4,36+n*2,true);w(8,'WAVEfmt ');d.setUint32(16,16,true);d.setUint16(20,1,true);d.setUint16(22,1,true);
+  d.setUint32(24,16000,true);d.setUint32(28,32000,true);d.setUint16(32,2,true);d.setUint16(34,16,true);w(36,'data');d.setUint32(40,n*2,true);
+  new Int16Array(buf,44).set(pcm);
+  return{blob:new Blob([buf],{type:'audio/wav'}),rms:Math.sqrt(e/Math.max(n,1))};
+}
+
+// ---------- Gemini ----------
+const SYS=`أنت مساعد يستمع لمكالمة Teams (محاضرة أو اجتماع) على مقاطع صوتية قصيرة، بالعربية أو الإنجليزية أو خليط منهما.
+أول ثانيتين تقريباً من كل مقطع (عدا الأول) مكررة من المقطع السابق: تجاهلها ولا تكرر ما ورد في «آخر ما قيل».
+أرجع JSON فقط:
+- transcript: نص ما قيل حرفياً بلغته الأصلية (فارغ إن لم يكن هناك كلام).
+- points: نقاط جديدة ومهمة من هذا المقطع فقط، بالعربية، قصيرة ومباشرة (فارغة إن لم يكن هناك جديد).
+- questions: فقط الأسئلة التي وجّهها المتحدث للحاضرين أو طرحها كتحدٍّ للتفكير. لكل سؤال: نصه، وجواب صحيح ومختصر بالعربية (جملة إلى ثلاث). لا تضع أسئلة الحاضرين العادية ولا الأسئلة البلاغية البسيطة.`;
+const SCHEMA={type:'OBJECT',properties:{transcript:{type:'STRING'},points:{type:'ARRAY',items:{type:'STRING'}},questions:{type:'ARRAY',items:{type:'OBJECT',properties:{question:{type:'STRING'},answer:{type:'STRING'}},required:['question','answer']}}},required:['transcript','points','questions']};
+
+async function gem(body){
+  const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(S.model)}:generateContent`,{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':S.apiKey},body:JSON.stringify(body)});
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(j?.error?.message||`خطأ ${r.status} من Gemini`);
+  return(j?.candidates?.[0]?.content?.parts||[]).map(p=>p.text||'').join('');
+}
+const b64=b=>new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>ok(String(r.result).split(',')[1]);r.onerror=()=>no(new Error('تعذّرت قراءة الصوت'));r.readAsDataURL(b)});
+
+async function analyze(blob){
+  const ctx=`آخر ما قيل:\n${text().slice(-500)||'(بداية المكالمة)'}\n\nآخر النقاط:\n${D.points.slice(-15).join('\n')||'-'}`;
+  const t=await gem({systemInstruction:{parts:[{text:SYS}]},contents:[{role:'user',parts:[{text:ctx},{inlineData:{mimeType:'audio/wav',data:await b64(blob)}}]}],generationConfig:{responseMimeType:'application/json',responseSchema:SCHEMA}});
+  const p=JSON.parse(t.replace(/```json|```/g,'').trim());
+  return{transcript:p.transcript||'',points:p.points||[],questions:p.questions||[]};
+}
+
+function enqueue(job){
+  pend++;render();
+  chain=chain.then(async()=>{
+    for(let k=0;k<2;k++){
+      try{
+        const r=await analyze(job.blob);
+        if(r.transcript.trim())D.tr[job.i]=r.transcript.trim();
+        D.points.push(...r.points);
+        r.questions.forEach(q=>D.qas.unshift({...q,at:job.at}));
+        D.fails=D.fails.filter(f=>f!==job);save();return;
+      }catch(e){
+        if(k){D.lastErr=e instanceof Error?e.message:'خطأ غير معروف';if(!D.fails.includes(job))D.fails.push(job)}
+        else await sleep(3000);
+      }
+    }
+  }).finally(()=>{pend--;render()});
+}
+const retry=()=>{D.lastErr='';D.fails.splice(0).forEach(enqueue)};
+
+function onSeg(f32,sr){
+  const i=idx++,{blob,rms}=toWav(f32,sr);
+  if(rms<.003)return; // صمت
+  enqueue({i,blob,at:fmt((Date.now()-t0)/1000)});
+}
+
+// ---------- التحكم ----------
+async function start(){
+  D.lastErr='';
+  if(!S.apiKey){$('#set').open=true;D.lastErr='أضف مفتاح Gemini من الإعدادات أولاً.';return render()}
+  try{
+    const cap=await openCapture(S.src);
+    let pcm;
+    try{pcm=await startPCM(cap.streams,onSeg,S.seg)}catch(e){cap.stop();throw e}
+    cap.tracks.forEach(t=>t.addEventListener('ended',stop));
+    rec={cap,pcm};t0=Date.now();idx=D.tr.length;
+    timer=setInterval(()=>{$('#tm').textContent=fmt((Date.now()-t0)/1000)},1000);
+    getWake();
+  }catch(e){D.lastErr=e instanceof Error?e.message:'تعذّر بدء التسجيل'}
+  render();
+}
+function stop(){
+  if(!rec)return;
+  const r=rec;rec=null;clearInterval(timer);
+  r.pcm.stop();r.cap.stop();
+  wake?.release().catch(()=>{});wake=null;
+  render();
+}
+async function getWake(){try{wake=await navigator.wakeLock?.request('screen')}catch{}}
+document.addEventListener('visibilitychange',()=>{if(rec&&document.visibilityState==='visible')getWake()});
+
+async function summarize(){
+  busySum=true;D.lastErr='';render();
+  try{
+    await chain;
+    D.sum=await gem({contents:[{role:'user',parts:[{text:`هذا نص مكالمة أو محاضرة Teams كاملة. اكتب ملخصاً منظماً بالعربية: عنوان، أهم المحاور، التعريفات والقوانين المهمة، القرارات والمهام إن وجدت، وما قد يأتي في الامتحان. اجعله مناسباً للمراجعة السريعة.\n\n${text()}`}]}]});
+    save();
+  }catch(e){D.lastErr=e instanceof Error?e.message:'تعذّر التلخيص'}
+  busySum=false;render();
+}
+
+// ---------- الواجهة ----------
+function fill(sel,arr,mk,msg){
+  const box=$(sel);box.replaceChildren();
+  if(!arr.length){box.append(el('p','empty',msg));return}
+  if(sel==='#pts'){const ul=el('ul','card');arr.forEach(p=>ul.append(el('li','',p)));box.append(ul)}
+  else arr.forEach(x=>box.append(mk(x)));
+}
+function render(){
+  const on=!!rec;
+  $('#rec').textContent=on?'إيقاف':'ابدأ التسجيل';
+  $('#rec').className=on?'stop':'pri';
+  $('#live').hidden=!on;
+  $('#pend').textContent=pend?'يحلّل '+pend+'…':'';
+  document.querySelectorAll('#src button').forEach(b=>{b.setAttribute('aria-checked',String(b.dataset.v===S.src));b.disabled=on});
+  $('#hint').hidden=S.src==='mic'||on;
+  const eb=$('#err');eb.hidden=!(D.lastErr||D.fails.length);eb.replaceChildren();
+  if(!eb.hidden){
+    eb.append(el('span','',(D.fails.length?`تعذّر تحليل ${D.fails.length} مقطع. `:'')+D.lastErr));
+    if(D.fails.length&&!pend){const b=el('button','','أعد المحاولة');b.onclick=retry;eb.append(b)}
+  }
+  fill('#qa',D.qas,q=>{const a=el('article','card qa');a.append(el('b','',q.question),el('p','',q.answer),el('small','',q.at));return a},'عندما يطرح المتحدث سؤالاً سيظهر هنا مع جوابه خلال ثوانٍ.');
+  fill('#pts',D.points,null,'النقاط المهمة تظهر هنا أثناء المكالمة.');
+  const has=!!text();
+  $('#sum').textContent=D.sum||'أوقف التسجيل ثم اضغط «لخّص المكالمة كاملة».';
+  $('#sum').className='pre'+(D.sum?'':' mut');
+  $('#mk').disabled=!has||on||busySum;$('#mk').textContent=busySum?'يلخّص…':'لخّص المكالمة كاملة';
+  $('#cpS').hidden=!D.sum;
+  $('#trd').hidden=!has;$('#trx').textContent=D.tr.filter(Boolean).join('\n\n');
+}
+
+document.querySelectorAll('#src button').forEach(b=>b.onclick=()=>{S.src=b.dataset.v;saveS();render()});
+$('#rec').onclick=()=>rec?stop():start();
+$('#mk').onclick=summarize;
+$('#cpS').onclick=()=>navigator.clipboard?.writeText(D.sum);
+$('#cpT').onclick=()=>navigator.clipboard?.writeText(text());
+$('#dl').onclick=()=>{
+  const body=[D.sum&&'الملخص\n'+D.sum,D.qas.length&&'الأسئلة\n'+D.qas.map(q=>q.question+'\n'+q.answer).join('\n\n'),'النص الكامل\n'+text()].filter(Boolean).join('\n\n----------\n\n');
+  const a=el('a');a.href=URL.createObjectURL(new Blob([body],{type:'text/plain;charset=utf-8'}));a.download='محاضرة-'+new Date().toISOString().slice(0,10)+'.txt';a.click();URL.revokeObjectURL(a.href);
+};
+$('#newS').onclick=()=>{
+  if(rec)return;
+  if((D.tr.length||D.sum)&&!confirm('سيُحذف نص الجلسة الحالية وملخصها. تابع؟'))return;
+  D={tr:[],points:[],qas:[],sum:'',fails:[],lastErr:''};save();render();
+};
+$('#key').value=S.apiKey;$('#model').value=S.model;$('#seg').value=S.seg;
+$('#key').oninput=e=>{S.apiKey=e.target.value.trim();saveS()};
+$('#model').oninput=e=>{S.model=e.target.value.trim()||'gemini-2.5-flash';saveS()};
+$('#seg').onchange=e=>{S.seg=Math.min(90,Math.max(10,Number(e.target.value)||25));e.target.value=S.seg;saveS()};
+if(!S.apiKey)$('#set').open=true;
+render();
+if('serviceWorker' in navigator&&location.protocol.startsWith('http'))addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+</script>
+</body>
+</html>
